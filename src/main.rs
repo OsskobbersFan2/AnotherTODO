@@ -27,10 +27,7 @@ impl fmt::Display for Task {
         write!(
             f,
             "({}, {}, {}, {})",
-            self.task_name,
-            self.task_description,
-            self.deadline,
-            self.task_status.to_string()
+            self.task_name, self.task_description, self.deadline, self.task_status
         )
     }
 }
@@ -100,25 +97,26 @@ async fn main() -> Result<(), Box<dyn Error>> {
                     edit_task(&pool).await?;
                 }
                 "Exit Program" => break,
-                _ => println!("An Error has occured."),
+                _ => println!("An Error has occurred."),
             },
             Err(_) => println!("An error when choosing an option, please try again."),
         }
-        // * COMFIRM PROMPT
+
+        // * CONFIRM PROMPT
         let return_input = Confirm::new("Do you want to return to the main menu?")
             .with_default(true)
             .prompt();
 
         match return_input {
             Ok(true) => {
-                println!("");
+                println!();
                 clear_screen("".to_string());
             }
             Ok(false) => {
                 clear_screen("".to_string());
                 break;
             }
-            _ => println!("An Error has occured."),
+            _ => println!("An Error has occurred."),
         }
     }
     Ok(())
@@ -131,15 +129,15 @@ async fn add_task(pool: &sqlx::PgPool) -> Result<(), Box<dyn Error>> {
         .prompt()
         .expect("Deadline Error");
 
-    let desciption = Text::new("Add an description to your task.")
+    let description = Text::new("Add an description to your task.")
         .prompt()
         .expect("Description Error");
 
     let status = Status::New;
 
     let new_task = Task {
-        task_name: task_name,
-        task_description: desciption,
+        task_name,
+        task_description: description,
         deadline: task_deadline,
         task_status: status,
     };
@@ -150,7 +148,7 @@ async fn add_task(pool: &sqlx::PgPool) -> Result<(), Box<dyn Error>> {
     sqlx::query(query)
         .bind(&new_task.task_name)
         .bind(&new_task.task_description)
-        .bind(&new_task.deadline)
+        .bind(new_task.deadline)
         .bind(&new_task.task_status)
         .execute(pool)
         .await?;
@@ -172,7 +170,7 @@ async fn search_task(pool: &sqlx::PgPool) -> Result<(), Box<dyn Error>> {
         .fetch_all(pool)
         .await?;
 
-    if searched_task.last().is_none() == true {
+    if searched_task.last().is_none() {
         println!("No Tasks Found.")
     } else {
         let task_table = create_table(searched_task);
@@ -216,7 +214,7 @@ async fn delete_task(pool: &sqlx::PgPool) -> Result<(), Box<dyn Error>> {
 
     let delete_confirm = Confirm::new("Do you want to remove selected task.")
         .prompt()
-        .expect("Failed to get delete comfirmation.");
+        .expect("Failed to get delete confirmation.");
 
     let formatted_choice = format!("{}{}{}", "%", &delete_choice, "%");
 
@@ -264,19 +262,19 @@ async fn edit_task(pool: &sqlx::PgPool) -> Result<(), Box<dyn Error>> {
             match task_choice {
                 "Task Description" => {
                     // * TEXT PROMPT
-                    let desciption_change = Text::new("Change task description to: ")
+                    let description_change = Text::new("Change task description to: ")
                         .prompt()
                         .expect("Failed to get new description.");
 
-                    let desciption_change_query =
+                    let description_change_query =
                         "UPDATE task SET task_description = $1 WHERE task_name = $2";
 
-                    sqlx::query(desciption_change_query)
-                        .bind(&desciption_change)
+                    sqlx::query(description_change_query)
+                        .bind(&description_change)
                         .bind(&selected_task.task_name)
                         .execute(pool)
                         .await?;
-                    println!("Description has been changed to '{}'.", desciption_change);
+                    println!("Description has been changed to '{}'.", description_change);
                 }
                 "Deadline" => {
                     // * CHOICE PROMPT
@@ -288,15 +286,12 @@ async fn edit_task(pool: &sqlx::PgPool) -> Result<(), Box<dyn Error>> {
                         "UPDATE task SET deadline = $1 WHERE task_name = $2";
 
                     sqlx::query(deadline_change_query)
-                        .bind(&deadline_change)
+                        .bind(deadline_change)
                         .bind(&selected_task.task_name)
                         .execute(pool)
                         .await?;
 
-                    println!(
-                        "Deadline has been changed to {}.",
-                        deadline_change.to_string()
-                    );
+                    println!("Deadline has been changed to {}.", deadline_change);
                 }
                 "Task Status" => {
                     // * Personally I don't like the design of this chunk of code. Changes in status is really important!
@@ -335,12 +330,12 @@ async fn edit_task(pool: &sqlx::PgPool) -> Result<(), Box<dyn Error>> {
                 _ => {}
             }
 
-            // * COMFIRM PROMPT
+            // * CONFIRM PROMPT
             let exit_q = Confirm::new("Are you finished update the task?")
                 .prompt()
                 .expect("Failed to get Y/n.");
 
-            if exit_q == true {
+            if exit_q {
                 break;
             }
         },
@@ -388,7 +383,7 @@ fn create_table(tasks: Vec<Task>) -> Table {
         task_table.add_row(vec![
             Cell::new(&t.task_name),
             Cell::new(&t.task_description),
-            Cell::new(t.deadline.format("%d-%m-%Y").to_string()),
+            Cell::new(t.deadline.format("%d-%m-%Y")),
             Cell::new(&t.task_status).fg(status_color),
         ]);
     }
