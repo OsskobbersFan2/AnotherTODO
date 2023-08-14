@@ -10,7 +10,7 @@ use inquire::{
     Confirm, DateSelect, InquireError, Select, Text,
 };
 use sqlx::{encode, Any, Connection, FromRow, Value};
-use std::{clone, error::Error, fmt};
+use std::{error::Error, fmt};
 use termion::{clear, cursor};
 
 #[derive(Debug, FromRow)]
@@ -207,7 +207,7 @@ async fn delete_task(pool: &sqlx::PgPool) -> Result<(), Box<dyn Error>> {
         .fetch_all(pool)
         .await?;
 
-    let task_name: Vec<String> = searched_task.iter().map(|t| t.task_name.clone()).collect();
+    let task_name: Vec<&str> = searched_task.iter().map(|t| t.task_name.as_str()).collect();
 
     // * CHOICE PROMPT
     let delete_choice = Select::new("Choose which task to remove.", task_name)
@@ -237,7 +237,7 @@ async fn edit_task(pool: &sqlx::PgPool) -> Result<(), Box<dyn Error>> {
 
     let all_tasks = query.fetch_all(pool).await?;
 
-    let tasks_name: Vec<String> = all_tasks.iter().map(|t| t.task_name.clone()).collect();
+    let tasks_name: Vec<&str> = all_tasks.iter().map(|t| t.task_name.as_str()).collect();
 
     // * CHOICE PROMPT
     let choice = Select::new("Select Task", tasks_name)
@@ -253,7 +253,7 @@ async fn edit_task(pool: &sqlx::PgPool) -> Result<(), Box<dyn Error>> {
 
     match query_selected {
         Some(selected_task) => loop {
-            println!("Update {} Task", selected_task.task_name.clone());
+            println!("Update {} Task", selected_task.task_name);
             let options = vec!["Task Description", "Deadline", "Task Status"];
 
             // * CHOICE PROMPT
@@ -386,10 +386,10 @@ fn create_table(tasks: Vec<Task>) -> Table {
         };
 
         task_table.add_row(vec![
-            Cell::new(t.task_name.clone()),
-            Cell::new(t.task_description.clone()),
+            Cell::new(&t.task_name),
+            Cell::new(&t.task_description),
             Cell::new(t.deadline.format("%d-%m-%Y").to_string()),
-            Cell::new(t.task_status).fg(status_color),
+            Cell::new(&t.task_status).fg(status_color),
         ]);
     }
 
