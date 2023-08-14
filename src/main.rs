@@ -139,11 +139,10 @@ async fn main() -> Result<(), Box<dyn Error>> {
 
         match return_input {
             Ok(true) => {
-                println!();
-                clear_screen("".to_string());
+                clear_screen();
             }
             Ok(false) => {
-                clear_screen("".to_string());
+                clear_screen();
                 break;
             }
             _ => println!("An Error has occurred."),
@@ -411,6 +410,6 @@ fn create_table(tasks: Vec<Task>) -> Table {
 }
 
 // * This exist because I didn't want a weird looking println! everywhere
-fn clear_screen(_msg: String) {
-    println!("{}{}{}", _msg, clear::All, cursor::Goto(1, 1));
+fn clear_screen() {
+    println!("{}{}", clear::All, cursor::Goto(1, 1));
 }
