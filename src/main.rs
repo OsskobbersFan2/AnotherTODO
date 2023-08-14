@@ -43,21 +43,15 @@ enum Status {
     New,
 }
 
-// *! Without this method, viewing the all the tasks would cause stack overflow.
-impl Status {
-    fn estring(&self) -> String {
-        match self {
-            Self::New => String::from("New"),
-            Self::InProgress => String::from("In Progress"),
-            Self::Complete => String::from("Complete"),
-        }
-    }
-}
-
-// * Could probably delete, idk :-)
 impl fmt::Display for Status {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "({})", self)
+        let display = match self {
+            Self::New => "New",
+            Self::InProgress => "In Progress",
+            Self::Complete => "Complete",
+        };
+
+        write!(f, "({})", display)
     }
 }
 
@@ -336,7 +330,7 @@ async fn edit_task(pool: &sqlx::PgPool) -> Result<(), Box<dyn Error>> {
                         .bind(&selected_task.task_name)
                         .execute(pool)
                         .await?;
-                    println!("Status has been changed to '{}'.", new_status.estring());
+                    println!("Status has been changed to '{}'.", new_status);
                 }
                 _ => {}
             }
@@ -395,7 +389,7 @@ fn create_table(tasks: Vec<Task>) -> Table {
             Cell::new(t.task_name.clone()),
             Cell::new(t.task_description.clone()),
             Cell::new(t.deadline.format("%d-%m-%Y").to_string()),
-            Cell::new(t.task_status.estring()).fg(status_color),
+            Cell::new(t.task_status).fg(status_color),
         ]);
     }
 
