@@ -52,6 +52,48 @@ impl fmt::Display for Status {
     }
 }
 
+enum MenuChoice {
+    View,
+    Search,
+    Add,
+    Delete,
+    Update,
+    Exit,
+}
+
+impl fmt::Display for MenuChoice {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let display = match self {
+            MenuChoice::View => "View All Tasks",
+            MenuChoice::Search => "Search Tasks",
+            MenuChoice::Add => "Add Task",
+            MenuChoice::Delete => "Delete Task",
+            MenuChoice::Update => "Update Task",
+            MenuChoice::Exit => "Exit Program",
+        };
+
+        write!(f, "{}", display)
+    }
+}
+
+enum UpdateTaskChoice {
+    Description,
+    Deadline,
+    Status,
+}
+
+impl fmt::Display for UpdateTaskChoice {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let display = match self {
+            UpdateTaskChoice::Description => "Task Description",
+            UpdateTaskChoice::Deadline => "Deadline",
+            UpdateTaskChoice::Status => "Task Status",
+        };
+
+        write!(f, "{}", display)
+    }
+}
+
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn Error>> {
     // *! IMPORTANT
@@ -65,39 +107,27 @@ async fn main() -> Result<(), Box<dyn Error>> {
 
     // *? Prompts user with menu.
     loop {
-        let choice = vec![
-            "View All Tasks",
-            "Search Tasks",
-            "Add Task",
-            "Delete Task",
-            "Update Task",
-            "Exit Program",
+        let choices = vec![
+            MenuChoice::View,
+            MenuChoice::Search,
+            MenuChoice::Add,
+            MenuChoice::Delete,
+            MenuChoice::Update,
+            MenuChoice::Exit,
         ];
 
         // * CHOICE PROMPT
-        let input = Select::new(" Choose an Option", choice).prompt(); // * Why .expect() not here?
+        let input = Select::new(" Choose an Option", choices).prompt(); // * Why .expect() not here?
 
-        // *! I don't like &str way too error prone when making changes to prompt options.
         // * Also if Err in outer match statement below could have been handled with an expect on input, but whatever.
         match input {
             Ok(input) => match input {
-                "View All Tasks" => {
-                    view_all_task(&pool).await?;
-                }
-                "Search Tasks" => {
-                    search_task(&pool).await?;
-                }
-                "Add Task" => {
-                    add_task(&pool).await?;
-                }
-                "Delete Task" => {
-                    delete_task(&pool).await?;
-                }
-                "Update Task" => {
-                    edit_task(&pool).await?;
-                }
-                "Exit Program" => break,
-                _ => println!("An Error has occurred."),
+                MenuChoice::View => view_all_task(&pool).await?,
+                MenuChoice::Search => search_task(&pool).await?,
+                MenuChoice::Add => add_task(&pool).await?,
+                MenuChoice::Delete => delete_task(&pool).await?,
+                MenuChoice::Update => edit_task(&pool).await?,
+                MenuChoice::Exit => break,
             },
             Err(_) => println!("An error when choosing an option, please try again."),
         }
@@ -252,7 +282,11 @@ async fn edit_task(pool: &sqlx::PgPool) -> Result<(), Box<dyn Error>> {
     match query_selected {
         Some(selected_task) => loop {
             println!("Update {} Task", selected_task.task_name);
-            let options = vec!["Task Description", "Deadline", "Task Status"];
+            let options = vec![
+                UpdateTaskChoice::Description,
+                UpdateTaskChoice::Deadline,
+                UpdateTaskChoice::Status,
+            ];
 
             // * CHOICE PROMPT
             let task_choice = Select::new("Select Task", options)
@@ -260,7 +294,7 @@ async fn edit_task(pool: &sqlx::PgPool) -> Result<(), Box<dyn Error>> {
                 .expect("Error with Task Selection");
 
             match task_choice {
-                "Task Description" => {
+                UpdateTaskChoice::Description => {
                     // * TEXT PROMPT
                     let description_change = Text::new("Change task description to: ")
                         .prompt()
@@ -276,7 +310,8 @@ async fn edit_task(pool: &sqlx::PgPool) -> Result<(), Box<dyn Error>> {
                         .await?;
                     println!("Description has been changed to '{}'.", description_change);
                 }
-                "Deadline" => {
+
+                UpdateTaskChoice::Deadline => {
                     // * CHOICE PROMPT
                     let deadline_change = DateSelect::new("Change deadline to: ")
                         .prompt()
@@ -293,32 +328,17 @@ async fn edit_task(pool: &sqlx::PgPool) -> Result<(), Box<dyn Error>> {
 
                     println!("Deadline has been changed to {}.", deadline_change);
                 }
-                "Task Status" => {
-                    // * Personally I don't like the design of this chunk of code. Changes in status is really important!
-                    // * status_choice should always match the Status enum or else.
-                    let status_choice = vec!["New", "In-Progress", "Complete"];
+
+                UpdateTaskChoice::Status => {
+                    let status_choices = vec![Status::New, Status::InProgress, Status::Complete];
 
                     // * CHOICE PROMPT
-                    let status_change = Select::new("Update status to: ", status_choice)
+                    let new_status = Select::new("Update status to: ", status_choices)
                         .prompt()
                         .expect("Failed to get new status.");
 
                     let status_change_query =
                         "UPDATE task SET task_status = $1 WHERE task_name = $2";
-
-                    // *! Sketchy solution here!
-                    let new_status = match status_change {
-                        "New" => Status::New,
-                        "In-Progress" => Status::InProgress,
-                        "Complete" => Status::Complete,
-                        _ => {
-                            // *! There should not be a situation where status_change is anything other.
-                            // *! Unless I changed something in status_choice and got something wrong there.
-                            Status::New
-                            // *? Another solution is to get to original status of the task and set new_status to that.
-                            // *? Only problem in this, it does not get any fields of task.
-                        }
-                    };
 
                     sqlx::query(status_change_query)
                         .bind(&new_status)
@@ -327,7 +347,6 @@ async fn edit_task(pool: &sqlx::PgPool) -> Result<(), Box<dyn Error>> {
                         .await?;
                     println!("Status has been changed to '{}'.", new_status);
                 }
-                _ => {}
             }
 
             // * CONFIRM PROMPT
