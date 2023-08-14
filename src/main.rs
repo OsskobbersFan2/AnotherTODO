@@ -11,7 +11,7 @@ use termion::{clear, cursor};
 struct Task {
     pub task_name: String,        // *? Is the primary key for sql db.
     pub task_description: String, // *? Text field idk :-)
-    pub deadline: NaiveDate,      // *? I can't get how naivedata works but sure.
+    pub deadline: NaiveDate,      // *? I can't get how naivedate works but sure.
     pub task_status: Status,      // *? Check the Status enum
 }
 
@@ -110,7 +110,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
         ];
 
         // * CHOICE PROMPT
-        let input = Select::new(" Choose an Option", choices).prompt(); // * Why .expect() not here?
+        let input = Select::new("Choose an Option", choices).prompt(); // * Why .expect() not here?
 
         // * Also if Err in outer match statement below could have been handled with an expect on input, but whatever.
         match input {
@@ -183,7 +183,7 @@ async fn search_task(pool: &sqlx::PgPool) -> Result<(), Box<dyn Error>> {
         .prompt()
         .expect("Error with input into search.");
 
-    let search_query = format!("{}{}{}", "%", search_task, "%");
+    let search_query = format!("%{}%", search_task);
 
     // * For any query with 0 or 1 bind, it is written as this below.
     // * I'm still new to sql okay >:-(
@@ -220,7 +220,7 @@ async fn delete_task(pool: &sqlx::PgPool) -> Result<(), Box<dyn Error>> {
         .prompt()
         .expect("Error with input into search.");
 
-    let search_query = format!("{}{}{}", "%", search_task, "%");
+    let search_query = format!("%{}%", search_task);
 
     let searched_task = sqlx::query_as::<_, Task>("SELECT * FROM task WHERE task_name ILIKE $1 ")
         .bind(search_query)
@@ -234,7 +234,7 @@ async fn delete_task(pool: &sqlx::PgPool) -> Result<(), Box<dyn Error>> {
         .prompt()
         .expect("Failed to get task.");
 
-    let delete_confirm = Confirm::new("Do you want to remove selected task.")
+    let delete_confirm = Confirm::new("Do you want to remove selected task?")
         .prompt()
         .expect("Failed to get delete confirmation.");
 
@@ -243,7 +243,7 @@ async fn delete_task(pool: &sqlx::PgPool) -> Result<(), Box<dyn Error>> {
         return Ok(());
     }
 
-    let formatted_choice = format!("{}{}{}", "%", &delete_choice, "%");
+    let formatted_choice = format!("%{}%", &delete_choice);
 
     sqlx::query_as::<_, Task>("DELETE FROM task WHERE task_name ILIKE $1")
         .bind(formatted_choice)
@@ -269,7 +269,7 @@ async fn edit_task(pool: &sqlx::PgPool) -> Result<(), Box<dyn Error>> {
         .prompt()
         .expect("Error with Task Selection");
 
-    let choice_formatted = format!("{}{}{}", "%", choice, "%");
+    let choice_formatted = format!("%{}%", choice);
 
     let query_selected = sqlx::query_as::<_, Task>("SELECT * FROM task WHERE task_name ILIKE $1 ")
         .bind(choice_formatted)
@@ -347,7 +347,7 @@ async fn edit_task(pool: &sqlx::PgPool) -> Result<(), Box<dyn Error>> {
             }
 
             // * CONFIRM PROMPT
-            let exit_q = Confirm::new("Are you finished update the task?")
+            let exit_q = Confirm::new("Are you finished updating the task?")
                 .prompt()
                 .expect("Failed to get Y/n.");
 
