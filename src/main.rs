@@ -63,6 +63,7 @@ impl fmt::Display for Status {
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn Error>> {
+    // *! IMPORTANT
     let url = "Insert Your Postgres URL here.";
     let pool = sqlx::postgres::PgPool::connect(url).await?;
     // * DB migrations
