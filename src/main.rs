@@ -1,15 +1,9 @@
-#![allow(unused)]
-use chrono::{NaiveDate, Weekday};
+use chrono::NaiveDate;
 use comfy_table::{
-    modifiers::UTF8_ROUND_CORNERS, presets::UTF8_FULL, Attribute, Cell, Color, ContentArrangement,
-    Row, Table,
+    modifiers::UTF8_ROUND_CORNERS, presets::UTF8_FULL, Cell, Color, ContentArrangement, Table,
 };
-use futures::TryFutureExt;
-use inquire::{
-    validator::{StringValidator, Validation},
-    Confirm, DateSelect, InquireError, Select, Text,
-};
-use sqlx::{encode, Any, Connection, FromRow, Value};
+use inquire::{Confirm, DateSelect, Select, Text};
+use sqlx::FromRow;
 use std::{error::Error, fmt};
 use termion::{clear, cursor};
 
@@ -103,7 +97,6 @@ async fn main() -> Result<(), Box<dyn Error>> {
     sqlx::migrate!("./migrations").run(&pool).await?;
     // * I have no idea any of this works.
     // *! Dreams of Code YT: "SQLx is my favorite PostgreSQL driver to use with Rust." For any troubleshooting.
-    let mut conn = sqlx::postgres::PgConnection::connect(url);
 
     // *? Prompts user with menu.
     loop {
@@ -186,7 +179,7 @@ async fn add_task(pool: &sqlx::PgPool) -> Result<(), Box<dyn Error>> {
 }
 
 async fn search_task(pool: &sqlx::PgPool) -> Result<(), Box<dyn Error>> {
-    let mut search_task = Text::new("Search Tasks: ")
+    let search_task = Text::new("Search Tasks: ")
         .prompt()
         .expect("Error with input into search.");
 
@@ -223,7 +216,7 @@ async fn view_all_task(pool: &sqlx::PgPool) -> Result<(), Box<dyn Error>> {
 }
 
 async fn delete_task(pool: &sqlx::PgPool) -> Result<(), Box<dyn Error>> {
-    let mut search_task = Text::new("Search Tasks: ")
+    let search_task = Text::new("Search Tasks: ")
         .prompt()
         .expect("Error with input into search.");
 
@@ -245,9 +238,14 @@ async fn delete_task(pool: &sqlx::PgPool) -> Result<(), Box<dyn Error>> {
         .prompt()
         .expect("Failed to get delete confirmation.");
 
+    if !delete_confirm {
+        println!("Task '{}' was not deleted.", delete_choice);
+        return Ok(());
+    }
+
     let formatted_choice = format!("{}{}{}", "%", &delete_choice, "%");
 
-    let task_delete = sqlx::query_as::<_, Task>("DELETE FROM task WHERE task_name ILIKE $1")
+    sqlx::query_as::<_, Task>("DELETE FROM task WHERE task_name ILIKE $1")
         .bind(formatted_choice)
         .fetch_optional(pool)
         .await?;
@@ -390,7 +388,7 @@ fn create_table(tasks: Vec<Task>) -> Table {
 
     // * Adding each tasks to the table in the most super jank way possible
     // * This is redneck Rust.
-    for (i, t) in tasks.iter().enumerate() {
+    for t in tasks.iter() {
         // * Really proud of making the colors of each status type have their own color.
         let status_color = match t.task_status {
             Status::New => Color::Red,
